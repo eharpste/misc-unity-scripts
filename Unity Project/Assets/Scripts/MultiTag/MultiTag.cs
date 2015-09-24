@@ -7,24 +7,24 @@ public class MultiTag : MonoBehaviour {
 
     #region ================ Static Properties ======================
 
-    private static Dictionary<string, List<GameObject>> dict = new Dictionary<string,List<GameObject>>();
+    private static Dictionary<string, List<GameObject>> tagMap = new Dictionary<string,List<GameObject>>();
 
     private static bool AddToMap(string tag, GameObject go) {
-        if (!dict.ContainsKey(tag)) {
-            dict[tag] = new List<GameObject>();
+        if (!tagMap.ContainsKey(tag)) {
+            tagMap[tag] = new List<GameObject>();
         }
-        if (!dict[tag].Contains(go)) {
-            dict[tag].Add(go);
+        if (!tagMap[tag].Contains(go)) {
+            tagMap[tag].Add(go);
             return true;
         }
         return false;
     }
 
     private static bool RemoveFromMap(string tag, GameObject go) {
-        if (dict.ContainsKey(tag)) {
-            if (dict[tag].Remove(go)) {
-                if (dict[tag].Count == 0) {
-                    dict.Remove(tag);
+        if (tagMap.ContainsKey(tag)) {
+            if (tagMap[tag].Remove(go)) {
+                if (tagMap[tag].Count == 0) {
+                    tagMap.Remove(tag);
                 }
                 return true;
             }
@@ -32,31 +32,58 @@ public class MultiTag : MonoBehaviour {
         return false;
     }
 
+    /// <summary>
+    /// Find a single GameObject with the given tag. Designed to mimic the standard tag API but 
+    /// really just a wrapper for calling FindOneGameObjectWithTag().
+    /// </summary>
+    /// <param name="tag"></param>
+    /// <returns></returns>
     public static GameObject FindGameObjectWithTag(string tag) {
-        return FindAGameObjectWithTag(tag);
+        return FindOneGameObjectWithTag(tag);
     }
 
     public static GameObject[] FindGameObjectsWithTag(string tag) {
         return FindAllGameObjectsWithTag(tag);
     }
 
-    public static GameObject FindAGameObjectWithTag(string tag) {
-        if (dict.ContainsKey(tag)) {
-            return dict[tag][0];
+    /// <summary>
+    /// Find a single GameObject with the given tag. What I feel is a far more sensible naming 
+    /// convention for the methods where they differ by more than a single 's' somewhere in
+    /// the signature.
+    /// </summary>
+    /// <param name="tag"></param>
+    /// <returns></returns>
+    public static GameObject FindOneGameObjectWithTag(string tag) {
+        if (tagMap.ContainsKey(tag)) {
+            return tagMap[tag][0];
         }
         return null;
     }
 
     public static GameObject[] FindAllGameObjectsWithTag(string tag) {
-        if(dict.ContainsKey(tag)) {
-            return dict[tag].ToArray();
+        if(tagMap.ContainsKey(tag)) {
+            return tagMap[tag].ToArray();
         }
         return null;
     }
 
+    /// <summary>
+    /// Find any GameObjects with any of the tags in the provided array.
+    /// </summary>
+    /// <param name="tags"></param>
+    /// <returns></returns>
+    public static GameObject[] FindAnyGameObjectsWithTags(string[] tags) {
+        HashSet<GameObject> ret = new HashSet<GameObject>();
+        foreach (string t in tags) {
+            ret.UnionWith(FindAllGameObjectsWithTag(t));
+        }
+        return ret.ToArray();
+    }
+
+
     public static string[] SortedTagOptions() {
         List<string> keys = new List<string>();
-        foreach (string k in dict.Keys) {
+        foreach (string k in tagMap.Keys) {
             keys.Add(k);
         }
         keys.Sort();
@@ -66,54 +93,66 @@ public class MultiTag : MonoBehaviour {
 
     #endregion ======================================================
 
+    public IList<string> multitags {
+        get {
+            return _multitags.AsReadOnly();
+        }
+    }
+
     [SerializeField()]
-    public List<string> multitags = new List<string>();
+    private  List<string> _multitags = new List<string>();
 
     public void AddMultiTag(string tag) {
-        if (!multitags.Contains(tag)) {
+        if (!_multitags.Contains(tag)) {
             AddToMap(tag, this.gameObject);
-            multitags.Add(tag);
+            _multitags.Add(tag);
         }
     }
 
     public void AddMultiTags(string[] tags) {
         foreach (string s in tags) {
-            if (!multitags.Contains(s)) {
+            if (!_multitags.Contains(s)) {
                 AddToMap(s, this.gameObject);
-                multitags.Add(s);
+                _multitags.Add(s);
             }
         }
     }
 
     public void RemoveMultiTag(string tag) {
-        if (multitags.Contains(tag) && dict.ContainsKey(tag)) {
+        if (_multitags.Contains(tag) && tagMap.ContainsKey(tag)) {
             RemoveFromMap(tag, this.gameObject);
-            multitags.Remove(tag);
+            _multitags.Remove(tag);
         }
     }
 
     public void RemoveMultiTags(string[] tags) {
         foreach (string s in tags) {
-            multitags.Remove(s);
+            _multitags.Remove(s);
             RemoveFromMap(s,this.gameObject);
         }
     }
 
+    public void ChangeMultiTag(string oldtag, string newtag) {
+        for (int i = 0; i < _multitags.Count; i++) {
+            if (_multitags[i] == oldtag) {
+                _multitags[i] = newtag;
+                RemoveFromMap(oldtag, this.gameObject);
+                AddToMap(newtag, this.gameObject);
+            }
+        }
+    }
+
+
     public void ClearMultiTags() {
-        foreach (string s in multitags) {
+        foreach (string s in _multitags) {
             RemoveFromMap(s, this.gameObject);
         }
-        multitags.Clear();
+        _multitags.Clear();
     }
-
-    void Awake() {
-        
-    }
-
 
     void OnEnable() {
         //this.multitags = this.multitags.Distinct().ToList<string>();
-        foreach (string s in multitags) {
+        foreach (string s in _multitags) {
             AddToMap(s, this.gameObject);
         }
     }

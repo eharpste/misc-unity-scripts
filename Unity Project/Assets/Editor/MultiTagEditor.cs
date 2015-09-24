@@ -60,7 +60,7 @@ class MultiTagEditor : Editor {
                     }
                     else if (!mt.multitags.Contains(tagOptions[newdex])) {
                         //update the tag if its new
-                        mt.AddMultiTag(tagOptions[newdex]);
+                        mt.ChangeMultiTag(tagOptions[olddex], tagOptions[newdex]);
                         errorState = 0;
                     }
                     else {
